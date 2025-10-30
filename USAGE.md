@@ -29,17 +29,50 @@ python test_minimax_m2.py --prompt my_prompt.txt
 python test_minimax_m2.py --prompt example_prompt.txt --max_tokens 1024
 ```
 
-### 3. 控制生成长度
+### 3. 控制生成参数
+
+#### 使用贪婪解码（推荐，更稳定）
+```bash
+python test_minimax_m2.py --no_sample
+```
+**说明**：贪婪解码在CPU模式下更稳定，避免过早停止生成。
+
+#### 调整temperature
+```bash
+# 低temperature（更确定）
+python test_minimax_m2.py --temperature 0.3
+
+# 高temperature（更有创意）
+python test_minimax_m2.py --temperature 1.2
+```
+
+#### 调整top_p
+```bash
+python test_minimax_m2.py --top_p 0.95
+```
+
+#### 组合使用
+```bash
+python test_minimax_m2.py \
+  --prompt "Write a sorting algorithm" \
+  --max_tokens 1024 \
+  --temperature 0.5 \
+  --top_p 0.95
+```
+
+### 4. 控制生成长度
 
 ```bash
-# 生成256个tokens
+# 生成256个新tokens
 python test_minimax_m2.py --max_tokens 256
 
-# 生成2048个tokens
+# 生成2048个新tokens  
 python test_minimax_m2.py --max_tokens 2048
 ```
 
-### 4. 启用专家权重相似度分析
+**重要**：`--max_tokens` 指定的是**新生成的token数**，不包括prompt的长度。
+
+### 5. 启用专家权重相似度分析
 
 ```bash
 # 使用自动并行
@@ -52,7 +85,7 @@ python test_minimax_m2.py --enable_expert_similarity --n_jobs 64
 python test_minimax_m2.py --enable_expert_similarity --n_jobs 100
 ```
 
-### 5. 控制输出
+### 6. 控制输出
 
 #### 指定输出目录
 ```bash
@@ -118,13 +151,55 @@ for i in {1..3}; do
 done
 ```
 
+## ⚠️ 常见问题：生成token数太少
+
+如果你遇到生成只有几个token就停止的情况：
+
+```
+✅ Generation completed!
+📌 Total tokens: 11
+📌 Generated tokens: 2  ← 太少了！
+```
+
+### 解决方案
+
+#### 方案1：使用贪婪解码（最推荐）
+```bash
+python test_minimax_m2.py \
+  --prompt "Write a Python function to calculate fibonacci numbers" \
+  --max_tokens 1024 \
+  --no_sample
+```
+
+#### 方案2：降低temperature
+```bash
+python test_minimax_m2.py \
+  --prompt "Write a Python function to calculate fibonacci numbers" \
+  --max_tokens 1024 \
+  --temperature 0.3
+```
+
+#### 方案3：更改prompt
+```bash
+# 更具体、更明确的prompt通常效果更好
+python test_minimax_m2.py \
+  --prompt "Below is a complete Python implementation of fibonacci:\n\ndef fibonacci(n):" \
+  --max_tokens 1024 \
+  --no_sample
+```
+
+查看 [TROUBLESHOOTING.md](TROUBLESHOOTING.md) 获取更多解决方案。
+
 ## 命令行参数完整列表
 
 ### Prompt相关
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `--prompt` | str | 默认prompt | 输入prompt（文本或文件路径） |
-| `--max_tokens` | int | 512 | 生成的最大token数 |
+| `--max_tokens` | int | 512 | 生成的**新**token数（不含prompt） |
+| `--temperature` | float | 0.7 | 采样温度（0.1-2.0） |
+| `--top_p` | float | 0.9 | Top-p采样参数 |
+| `--no_sample` | flag | False | 使用贪婪解码 |
 
 ### 分析相关
 | 参数 | 类型 | 默认值 | 说明 |

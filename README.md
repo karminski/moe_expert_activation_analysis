@@ -124,7 +124,16 @@ This dedicated script provides a streamlined interface for MiniMax-M2 analysis:
   - If a file path is provided, the file will be automatically read
   - Supports UTF-8 encoding for international characters
   - Default: Built-in example prompt
-- `--max_tokens INT`: Maximum tokens to generate (default: 512)
+- `--max_tokens INT`: Maximum **new** tokens to generate (default: 512)
+  - **Note**: This is `max_new_tokens`, not total length
+  - Example: `--max_tokens 1024` will generate up to 1024 new tokens after the prompt
+- `--temperature FLOAT`: Sampling temperature (default: 0.7)
+  - Lower values (0.1-0.5): More deterministic output
+  - Higher values (0.8-1.5): More creative/random output
+- `--top_p FLOAT`: Top-p (nucleus) sampling (default: 0.9)
+  - Controls diversity of output
+- `--no_sample`: Use greedy decoding instead of sampling
+  - Recommended for CPU mode or when generation is unstable
 
 #### Analysis Configuration
 - `--enable_expert_similarity`: Enable expert weight similarity computation
@@ -147,14 +156,28 @@ This dedicated script provides a streamlined interface for MiniMax-M2 analysis:
 # Quick test with default settings
 python test_minimax_m2.py
 
-# Custom prompt and output
-python test_minimax_m2.py --prompt "Explain quantum computing" --max_tokens 256
+# Custom prompt with more tokens
+python test_minimax_m2.py --prompt "Explain quantum computing" --max_tokens 1024
 
-# Load prompt from file
-python test_minimax_m2.py --prompt my_research_question.txt --output_dir ./results/exp1
+# Load prompt from file with greedy decoding (more stable on CPU)
+python test_minimax_m2.py --prompt my_research_question.txt --no_sample
 
-# Full analysis with expert similarity (recommended for research)
-python test_minimax_m2.py --enable_expert_similarity --n_jobs 64 --max_tokens 1024
+# Adjust temperature for more deterministic output
+python test_minimax_m2.py --temperature 0.3 --top_p 0.95
+
+# Full analysis with expert similarity
+python test_minimax_m2.py \
+  --prompt "Write a Python sorting algorithm" \
+  --max_tokens 1024 \
+  --no_sample \
+  --enable_expert_similarity \
+  --n_jobs 64
+
+# If generation stops too early, try greedy decoding
+python test_minimax_m2.py \
+  --prompt "Write a Python function" \
+  --max_tokens 1024 \
+  --no_sample
 
 # View all options
 python test_minimax_m2.py --help

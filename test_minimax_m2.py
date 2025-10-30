@@ -56,7 +56,24 @@ Examples:
         "--max_tokens",
         type=int,
         default=None,
-        help="Maximum number of tokens to generate (default: 512)",
+        help="Maximum number of NEW tokens to generate (default: 512)",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0.7,
+        help="Sampling temperature (default: 0.7)",
+    )
+    parser.add_argument(
+        "--top_p",
+        type=float,
+        default=0.9,
+        help="Top-p sampling parameter (default: 0.9)",
+    )
+    parser.add_argument(
+        "--no_sample",
+        action="store_true",
+        help="Use greedy decoding instead of sampling",
     )
 
     # Analysis configuration
@@ -137,8 +154,11 @@ def main():
     DEFAULT_PROMPT = "Please help me write a Python program to render an ASCII character set of the Mandelbrot set"
     PROMPT = load_prompt(args.prompt) if args.prompt else DEFAULT_PROMPT
 
-    # Max tokens configuration (from args or default)
+    # Generation configuration (from args or default)
     MAX_LENGTH = args.max_tokens if args.max_tokens else 512
+    TEMPERATURE = args.temperature
+    TOP_P = args.top_p
+    DO_SAMPLE = not args.no_sample
 
     # Output directory (from args or auto-generated)
     if args.output_dir:
@@ -178,7 +198,10 @@ def main():
     else:
         print(f"📝 Prompt: {PROMPT}")
 
-    print(f"📊 Max Length: {MAX_LENGTH}")
+    print(f"📊 Max New Tokens: {MAX_LENGTH}")
+    print(f"🌡️  Temperature: {TEMPERATURE}")
+    print(f"🎲 Top-p: {TOP_P}")
+    print(f"🎯 Sampling: {'Enabled' if DO_SAMPLE else 'Disabled (Greedy)'}")
     print(f"🔍 Periodic Intervals: {PERIODIC_INTERVALS}")
     print(f"💾 Output Directory: {OUTPUT_DIR}")
     print(f"🖥️  Device: {DEVICE}")
@@ -312,21 +335,57 @@ def main():
     print(f"✅ Input tokens: {input_length}")
 
     # ==================== 运行生成并记录激活 ====================
-    print(f"\n🚀 Generating (max_length={MAX_LENGTH})...")
+    print(f"\n🚀 Generating (max_new_tokens={MAX_LENGTH})...")
+    print(
+        f"   Input tokens: {input_length}, will generate up to {MAX_LENGTH} new tokens"
+    )
     print("⏱️  This will take a while, please wait...")
+
+    # Debug: Check tokenizer configuration
+    print(f"\n🔍 Tokenizer info:")
+    print(f"   - eos_token_id: {tokenizer.eos_token_id}")
+    print(f"   - pad_token_id: {tokenizer.pad_token_id}")
+    print(f"   - bos_token_id: {tokenizer.bos_token_id}")
 
     try:
         with analyzer.record():
             with torch.no_grad():
-                outputs = model.generate(
+                # Prepare generation kwargs
+                gen_kwargs = {
                     **inputs,
-                    max_length=MAX_LENGTH,
-                    temperature=0.7,
-                    do_sample=True,
-                    top_p=0.9,
-                    pad_token_id=tokenizer.eos_token_id,
-                    eos_token_id=tokenizer.eos_token_id,
-                )
+                    "max_new_tokens": MAX_LENGTH,
+                    "pad_token_id": (
+                        tokenizer.pad_token_id
+                        if tokenizer.pad_token_id is not None
+                        else tokenizer.eos_token_id
+                    ),
+                }
+
+                if DO_SAMPLE:
+                    gen_kwargs.update(
+                        {
+                            "do_sample": True,
+                            "temperature": TEMPERATURE,
+                            "top_p": TOP_P,
+                        }
+                    )
+                else:
+                    gen_kwargs.update(
+                        {
+                            "do_sample": False,
+                        }
+                    )
+
+                print(f"\n⚙️  Generation parameters:")
+                print(f"   - max_new_tokens: {MAX_LENGTH}")
+                print(f"   - do_sample: {gen_kwargs['do_sample']}")
+                if DO_SAMPLE:
+                    print(f"   - temperature: {TEMPERATURE}")
+                    print(f"   - top_p: {TOP_P}")
+                print(f"   - pad_token_id: {gen_kwargs['pad_token_id']}")
+                print()
+
+                outputs = model.generate(**gen_kwargs)
 
         output_length = outputs.shape[1]
         generated_length = output_length - input_length
@@ -347,8 +406,13 @@ def main():
     except Exception as e:
         print(f"\n❌ Error during generation: {e}")
         print("\n💡 Tips:")
-        print("  - Try reducing max_length")
-        print("  - Check GPU memory usage")
+        print("  - Try reducing --max_tokens")
+        print("  - Try using greedy decoding: --no_sample")
+        print("  - Try lowering temperature: --temperature 0.3")
+        print("  - Check memory usage")
+        import traceback
+
+        traceback.print_exc()
         return
 
     # ==================== 获取统计摘要 ====================
