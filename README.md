@@ -74,6 +74,35 @@ python analyze_model.py \
 
 ### For MiniMax Models
 
+#### Using the dedicated test script (recommended)
+
+```bash
+# Basic usage with default prompt
+python test_minimax_m2.py
+
+# With custom prompt
+python test_minimax_m2.py --prompt "Write a Python script to visualize the Mandelbrot set"
+
+# Load prompt from file
+python test_minimax_m2.py --prompt my_prompt.txt --max_tokens 1024
+
+# Enable expert weight similarity analysis (time-consuming but comprehensive)
+python test_minimax_m2.py --enable_expert_similarity --n_jobs 64
+
+# Full customization
+python test_minimax_m2.py \
+  --prompt my_prompt.txt \
+  --max_tokens 1024 \
+  --enable_expert_similarity \
+  --n_jobs 64 \
+  --output_format json \
+  --output_dir ./my_results
+```
+
+**Note:** See [USAGE.md](USAGE.md) for detailed documentation of all command-line options.
+
+#### Using the generic analyzer
+
 ```bash
 python analyze_model.py \
   --model_path "MiniMax/MiniMax-M2" \
@@ -86,11 +115,60 @@ python analyze_model.py \
 
 ## Command Line Options
 
-### Required Arguments
+### MiniMax-M2 Test Script (`test_minimax_m2.py`)
+
+This dedicated script provides a streamlined interface for MiniMax-M2 analysis:
+
+#### Prompt Configuration
+- `--prompt TEXT_OR_FILE`: Input prompt (can be text string or path to a text file)
+  - If a file path is provided, the file will be automatically read
+  - Supports UTF-8 encoding for international characters
+  - Default: Built-in example prompt
+- `--max_tokens INT`: Maximum tokens to generate (default: 512)
+
+#### Analysis Configuration
+- `--enable_expert_similarity`: Enable expert weight similarity computation
+  - **Warning**: This is time-consuming (10-30+ minutes depending on hardware)
+  - Recommended to use with `--n_jobs` for parallelization
+- `--n_jobs INT`: Number of parallel threads for expert similarity
+  - Default: `None` (auto-detects CPU cores, max 32)
+  - Recommended: 64-100 for high-core-count systems
+
+#### Output Configuration
+- `--output_dir PATH`: Custom output directory
+  - Default: Auto-generated with timestamp (`minimax_m2_results_YYYYMMDD_HHMMSS`)
+- `--disable_structured_output`: Disable JSON output generation
+  - Default: Structured output is enabled
+- `--output_format {json,jsonl,pickle}`: Structured data format
+  - Default: `json`
+
+#### Examples
+```bash
+# Quick test with default settings
+python test_minimax_m2.py
+
+# Custom prompt and output
+python test_minimax_m2.py --prompt "Explain quantum computing" --max_tokens 256
+
+# Load prompt from file
+python test_minimax_m2.py --prompt my_research_question.txt --output_dir ./results/exp1
+
+# Full analysis with expert similarity (recommended for research)
+python test_minimax_m2.py --enable_expert_similarity --n_jobs 64 --max_tokens 1024
+
+# View all options
+python test_minimax_m2.py --help
+```
+
+### Generic Analyzer (`analyze_model.py`)
+
+For other MoE models or more control:
+
+#### Required Arguments
 
 - `--model_path`: Path or name of the model on HuggingFace Hub
 
-### Model Arguments
+#### Model Arguments
 
 - `--model_type`: Type of MoE model (`minimax`, `deepseek_v3`, `qwen3`, or `auto` for auto-detection)
 - `--device`: Device to use (`cpu`, `cuda`, `cuda:0`, etc.; default: `auto`)
@@ -98,13 +176,13 @@ python analyze_model.py \
 - `--trust_remote_code`: Trust remote code when loading model (flag)
 - `--use_flash_attention`: Use flash attention if available (flag)
 
-### Input Arguments
+#### Input Arguments
 
 - `--prompt`: Input prompt for generation (default: "Once upon a time, in a distant galaxy")
 - `--max_length`: Maximum length for generation (default: 200)
 - `--temperature`: Sampling temperature (default: 1.0)
 
-### Analysis Arguments
+#### Analysis Arguments
 
 - `--output_dir`: Output directory for results (default: `./moe_analysis_results`)
 - `--analyze_correlation`: Perform layer correlation analysis (flag)

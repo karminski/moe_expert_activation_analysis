@@ -1,0 +1,11 @@
+Please help me write a Python program to render an ASCII character set of the Mandelbrot set.
+
+The program should:
+1. Define the complex plane boundaries
+2. Iterate over each pixel position
+3. Calculate whether the point belongs to the Mandelbrot set
+4. Map the iteration count to ASCII characters
+5. Print the result as ASCII art
+
+Include comments explaining the mathematics behind the Mandelbrot set.
+

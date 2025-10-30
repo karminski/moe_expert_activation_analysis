@@ -10,11 +10,47 @@ from typing import Dict, List, Optional, Tuple, Any
 from contextlib import contextmanager
 from scipy.stats import pearsonr
 from collections import defaultdict
+from multiprocessing import Pool, cpu_count
+import os
 
 try:
     from .moe_hooks import MoEHookManager
 except ImportError:
     from moe_hooks import MoEHookManager
+
+
+# Global worker function for multiprocessing (must be picklable)
+def _compute_similarity_worker(task):
+    """
+    Worker function for parallel expert similarity computation.
+    
+    Args:
+        task: Tuple of (layer_i, layer_j, expert_idx, weights_i, weights_j)
+    
+    Returns:
+        Dictionary with similarity result or None
+    """
+    layer_i, layer_j, expert_idx, weights_i, weights_j = task
+    
+    if weights_i is None or weights_j is None:
+        return None
+    
+    # Compute cosine similarity
+    dot_product = np.dot(weights_i, weights_j)
+    norm_i = np.linalg.norm(weights_i)
+    norm_j = np.linalg.norm(weights_j)
+    
+    if norm_i == 0 or norm_j == 0:
+        return None
+    
+    similarity = dot_product / (norm_i * norm_j + 1e-8)
+    
+    return {
+        'layer_i': layer_i,
+        'layer_j': layer_j,
+        'expert_idx': expert_idx,
+        'similarity': float(similarity),
+    }
 
 
 class MoEAnalyzer:
@@ -289,7 +325,7 @@ class MoEAnalyzer:
             'router_layers': router_layers,
         }
     
-    def compute_expert_weight_similarity(self, delta: int = 12) -> Dict[str, Any]:
+    def compute_expert_weight_similarity(self, delta: int = 12, max_experts: int = None, use_parallel: bool = True, n_jobs: int = None) -> Dict[str, Any]:
         """
         Compute similarity between expert weights at layers separated by delta.
         
@@ -298,6 +334,10 @@ class MoEAnalyzer:
         
         Args:
             delta: Layer distance to compare
+            max_experts: Maximum number of experts to analyze (None = all). 
+                        Use this to speed up analysis for models with many experts.
+            use_parallel: Whether to use parallel processing (default: True)
+            n_jobs: Number of parallel jobs. None = use all CPU cores
             
         Returns:
             Dictionary with similarity statistics and distributions
@@ -309,35 +349,36 @@ class MoEAnalyzer:
         if not layers:
             layers = list(range(len(self.model.model.layers)))
         
-        similarities = []
+        if use_parallel and n_jobs is None:
+            n_jobs = min(cpu_count(), 32)  # 限制最多32个进程
         
+        print(f"        Using {'parallel' if use_parallel else 'serial'} mode", end="")
+        if use_parallel:
+            print(f" with {n_jobs} workers")
+        else:
+            print()
+        
+        # 收集所有需要比较的层对
+        layer_pairs = []
         for i, layer_i in enumerate(layers):
             if i + delta >= len(layers):
                 break
-            
             layer_j = layers[i + delta]
-            
-            # Get expert modules
-            experts_i = self._get_experts_from_layer(self.model.model.layers[layer_i])
-            experts_j = self._get_experts_from_layer(self.model.model.layers[layer_j])
-            
-            if experts_i is None or experts_j is None:
-                continue
-            
-            num_experts = min(len(experts_i), len(experts_j))
-            
-            for expert_idx in range(num_experts):
-                expert_sim = self._compute_expert_pair_similarity(
-                    experts_i[expert_idx],
-                    experts_j[expert_idx]
-                )
-                if expert_sim is not None:
-                    similarities.append({
-                        'layer_i': layer_i,
-                        'layer_j': layer_j,
-                        'expert_idx': expert_idx,
-                        'similarity': expert_sim,
-                    })
+            layer_pairs.append((layer_i, layer_j))
+        
+        if not layer_pairs:
+            return {'error': 'No valid layer pairs for the given delta'}
+        
+        if use_parallel:
+            # 并行处理
+            similarities = self._compute_similarities_parallel(
+                layer_pairs, max_experts, n_jobs
+            )
+        else:
+            # 串行处理（原始方法）
+            similarities = self._compute_similarities_serial(
+                layer_pairs, max_experts
+            )
         
         if not similarities:
             return {'error': 'No expert weights found for comparison'}
@@ -351,6 +392,99 @@ class MoEAnalyzer:
             'median_similarity': np.median(similarity_values),
             'delta': delta,
         }
+    
+    def _compute_similarities_serial(self, layer_pairs: List[Tuple[int, int]], max_experts: Optional[int]) -> List[Dict]:
+        """串行计算专家相似度（原始方法）"""
+        similarities = []
+        
+        for layer_i, layer_j in layer_pairs:
+            experts_i = self._get_experts_from_layer(self.model.model.layers[layer_i])
+            experts_j = self._get_experts_from_layer(self.model.model.layers[layer_j])
+            
+            if experts_i is None or experts_j is None:
+                continue
+            
+            num_experts = min(len(experts_i), len(experts_j))
+            if max_experts is not None:
+                num_experts = min(num_experts, max_experts)
+            
+            if num_experts > 20:
+                print(f"        Comparing layer {layer_i} -> {layer_j}: {num_experts} experts...", end=" ", flush=True)
+            
+            for expert_idx in range(num_experts):
+                expert_sim = self._compute_expert_pair_similarity(
+                    experts_i[expert_idx],
+                    experts_j[expert_idx]
+                )
+                if expert_sim is not None:
+                    similarities.append({
+                        'layer_i': layer_i,
+                        'layer_j': layer_j,
+                        'expert_idx': expert_idx,
+                        'similarity': expert_sim,
+                    })
+            
+            if num_experts > 20:
+                print("✓")
+        
+        return similarities
+    
+    def _compute_similarities_parallel(self, layer_pairs: List[Tuple[int, int]], max_experts: Optional[int], n_jobs: int) -> List[Dict]:
+        """并行计算专家相似度"""
+        # 预先提取所有需要的专家权重（转为numpy以便序列化）
+        print("        Extracting expert weights...")
+        expert_weights_cache = {}
+        
+        for layer_i, layer_j in layer_pairs:
+            for layer_idx in [layer_i, layer_j]:
+                if layer_idx not in expert_weights_cache:
+                    experts = self._get_experts_from_layer(self.model.model.layers[layer_idx])
+                    if experts is not None:
+                        num_experts = len(experts) if max_experts is None else min(len(experts), max_experts)
+                        weights_list = []
+                        for expert_idx in range(num_experts):
+                            weights = self._extract_expert_weights(experts[expert_idx])
+                            weights_list.append(weights)
+                        expert_weights_cache[layer_idx] = weights_list
+        
+        # 准备并行任务
+        print(f"        Preparing {len(layer_pairs)} layer pairs for parallel processing...")
+        tasks = []
+        for layer_i, layer_j in layer_pairs:
+            if layer_i in expert_weights_cache and layer_j in expert_weights_cache:
+                num_experts = min(len(expert_weights_cache[layer_i]), len(expert_weights_cache[layer_j]))
+                for expert_idx in range(num_experts):
+                    tasks.append((
+                        layer_i,
+                        layer_j,
+                        expert_idx,
+                        expert_weights_cache[layer_i][expert_idx],
+                        expert_weights_cache[layer_j][expert_idx]
+                    ))
+        
+        print(f"        Computing {len(tasks)} expert similarities with {n_jobs} workers...")
+        
+        # 并行计算
+        with Pool(processes=n_jobs) as pool:
+            results = pool.map(_compute_similarity_worker, tasks, chunksize=max(1, len(tasks) // (n_jobs * 4)))
+        
+        # 过滤None结果
+        similarities = [r for r in results if r is not None]
+        
+        print(f"        ✓ Completed {len(similarities)} similarity computations")
+        return similarities
+    
+    def _extract_expert_weights(self, expert) -> Optional[np.ndarray]:
+        """提取专家的所有权重并合并为一个numpy数组"""
+        weights = []
+        for name in ['up_proj', 'down_proj', 'gate_proj', 'w1', 'w2', 'w3']:
+            if hasattr(expert, name):
+                w = getattr(expert, name).weight.detach().cpu().float().numpy().flatten()
+                weights.append(w)
+        
+        if weights:
+            return np.concatenate(weights)
+        return None
     
     def _get_experts_from_layer(self, layer):
         """Extract expert modules from a layer."""
