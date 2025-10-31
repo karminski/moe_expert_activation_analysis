@@ -151,6 +151,19 @@ This dedicated script provides a streamlined interface for MiniMax-M2 analysis:
 - `--output_format {json,jsonl,pickle}`: Structured data format
   - Default: `json`
 
+#### Model Cache Configuration (CPU Mode)
+- `--cache_dir PATH`: Directory to save/load cached float32 model
+  - **Saves 5-10 minutes** on subsequent runs
+  - Only needed for CPU mode (FP8→float32 conversion)
+  - Example: `--cache_dir ./minimax_m2_cache`
+- `--dump_cache`: Save the converted model after running
+  - Use on first run to create cache
+- `--dump_only`: Only convert and cache, then exit (no generation)
+  - Fastest way to create cache
+  - Use this to prepare cache before experiments
+  
+**💡 Tip**: Create cache once with `--dump_only`, then reuse with `--cache_dir` for fast loading!
+
 #### Examples
 ```bash
 # Quick test with default settings
@@ -179,9 +192,21 @@ python test_minimax_m2.py \
   --max_tokens 1024 \
   --no_sample
 
+# RECOMMENDED: Cache the float32 model for faster future runs (CPU mode)
+# Step 1: Create cache (one-time, takes 5-10 min)
+python test_minimax_m2.py --cache_dir ./model_cache --dump_only
+
+# Step 2: Use cache (loads in 1-2 min instead of 5-10 min)
+python test_minimax_m2.py --cache_dir ./model_cache --prompt "Your prompt"
+
+# Or: Create cache while running analysis
+python test_minimax_m2.py --cache_dir ./model_cache --dump_cache
+
 # View all options
 python test_minimax_m2.py --help
 ```
+
+**Note:** See [CACHING.md](CACHING.md) for detailed caching documentation.
 
 ### Generic Analyzer (`analyze_model.py`)
 

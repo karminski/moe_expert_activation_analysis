@@ -6,6 +6,20 @@ All notable changes to the MoE Expert Activation Analysis tool will be documente
 
 ### Added - 2025-10-30
 
+#### Model Caching (CPU Mode)
+- **Cache converted float32 models** for 5-10 minutes faster subsequent runs
+- `--cache_dir PATH`: Specify cache directory to save/load converted model
+- `--dump_cache`: Save converted model after running analysis
+- `--dump_only`: Only convert and cache, then exit (fastest cache creation)
+- **Features:**
+  - Automatic cache detection and loading
+  - SafeTensors format for cross-platform compatibility
+  - One-time conversion, reuse for all future runs
+  - Saves ~400-500 GB for MiniMax-M2 float32 cache
+- **Documentation:**
+  - `CACHING.md`: Comprehensive caching guide with examples
+  - Updated README and USAGE with cache instructions
+  
 #### Command-line Arguments Support
 - **Prompt Configuration**
   - `--prompt`: Specify input prompt via command-line or text file

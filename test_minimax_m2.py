@@ -42,6 +42,15 @@ Examples:
   
   # Enable expert weight similarity analysis
   python test_minimax_m2.py --enable_expert_similarity --n_jobs 64
+  
+  # Cache the float32 converted model for faster future runs
+  python test_minimax_m2.py --cache_dir ./model_cache --dump_cache
+  
+  # Use cached model (skip conversion)
+  python test_minimax_m2.py --cache_dir ./model_cache
+  
+  # Only convert and cache, don't run generation
+  python test_minimax_m2.py --cache_dir ./model_cache --dump_only
         """,
     )
 
@@ -105,6 +114,24 @@ Examples:
         type=str,
         default=None,
         help="Output directory (default: auto-generated with timestamp)",
+    )
+
+    # Model cache configuration
+    parser.add_argument(
+        "--cache_dir",
+        type=str,
+        default=None,
+        help="Directory to save/load cached float32 model (for CPU mode)",
+    )
+    parser.add_argument(
+        "--dump_cache",
+        action="store_true",
+        help="Save the converted float32 model to cache_dir after conversion",
+    )
+    parser.add_argument(
+        "--dump_only",
+        action="store_true",
+        help="Only convert and cache the model, then exit (no generation)",
     )
 
     return parser.parse_args()
@@ -182,6 +209,11 @@ def main():
     ENABLE_STRUCTURED_OUTPUT = not args.disable_structured_output
     STRUCTURED_OUTPUT_FORMAT = args.output_format
 
+    # Model cache configuration (from args)
+    CACHE_DIR = args.cache_dir
+    DUMP_CACHE = args.dump_cache or args.dump_only
+    DUMP_ONLY = args.dump_only
+
     # 向后兼容（保留旧变量名）
     SKIP_EXPERT_WEIGHT_SIMILARITY = not ENABLE_EXPERT_WEIGHT_SIMILARITY
 
@@ -218,6 +250,18 @@ def main():
         f"📄 Structured Output: {'Enabled' if ENABLE_STRUCTURED_OUTPUT else 'Disabled'} (format: {STRUCTURED_OUTPUT_FORMAT})"
     )
 
+    # Cache configuration
+    if CACHE_DIR:
+        print(f"💾 Model Cache: {CACHE_DIR}")
+        if DUMP_ONLY:
+            print("    Mode: Dump-only (convert and save, then exit)")
+        elif DUMP_CACHE:
+            print("    Mode: Run analysis and save cache")
+        else:
+            print("    Mode: Load from cache (if exists)")
+    else:
+        print("💾 Model Cache: Disabled (will convert every time)")
+
     if USE_CPU:
         print("\n⚠️  CPU Mode Enabled (CUDA disabled via environment variable)")
         print("    Note: CPU inference will be significantly slower than GPU.")
@@ -235,9 +279,51 @@ def main():
         tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
         print("✅ Tokenizer loaded successfully")
 
-        print("\n🔄 Loading model (this may take a while)...")
+        # Check if we should load from cache
+        load_from_cache = False
+        if USE_CPU and CACHE_DIR and os.path.exists(CACHE_DIR):
+            # Check for essential files
+            # For large models, check for sharded format (model.safetensors.index.json)
+            # For small models, check for single file (model.safetensors)
+            config_exists = os.path.exists(os.path.join(CACHE_DIR, "config.json"))
+            single_model_exists = os.path.exists(
+                os.path.join(CACHE_DIR, "model.safetensors")
+            )
+            sharded_model_exists = os.path.exists(
+                os.path.join(CACHE_DIR, "model.safetensors.index.json")
+            )
 
-        if USE_CPU:
+            if config_exists and (single_model_exists or sharded_model_exists):
+                load_from_cache = True
+                if sharded_model_exists:
+                    print(f"\n✨ Found cached float32 model at: {CACHE_DIR}")
+                    print("   (Sharded format detected)")
+                else:
+                    print(f"\n✨ Found cached float32 model at: {CACHE_DIR}")
+                print("   Loading from cache (skipping FP8→float32 conversion)...")
+            else:
+                print(f"\n⚠️  Cache directory exists but incomplete: {CACHE_DIR}")
+                if not config_exists:
+                    print("   Missing: config.json")
+                if not single_model_exists and not sharded_model_exists:
+                    print(
+                        "   Missing: model.safetensors or model.safetensors.index.json"
+                    )
+                print("   Will perform conversion and save to cache.")
+
+        if load_from_cache:
+            # Load directly from cache
+            print("\n🔄 Loading cached float32 model...")
+            model = AutoModelForCausalLM.from_pretrained(
+                CACHE_DIR,
+                dtype=DTYPE,
+                device_map={"": "cpu"},
+                low_cpu_mem_usage=True,
+                trust_remote_code=True,
+            )
+            print("✅ Cached model loaded successfully")
+            print("   ⚡ Skipped FP8→float32 conversion (using cached version)")
+        elif USE_CPU:
             # CPU模式：直接加载到CPU，使用float32
             print("    Loading configuration...")
             from transformers import AutoConfig
@@ -273,7 +359,7 @@ def main():
         print("✅ Model loaded successfully")
 
         # 强制转换所有参数和缓冲区到float32（解决FP8混合问题）
-        if USE_CPU:
+        if USE_CPU and not load_from_cache:
             print("\n🔄 Converting all weights to float32...")
             print("    ⚠️  Warning: Converting FP8 quantized model to float32")
             print("    This may cause some quality degradation in generation")
@@ -288,6 +374,46 @@ def main():
             print(
                 "    Note: For production use, consider using a GPU-compatible environment"
             )
+
+            # Save to cache if requested
+            if DUMP_CACHE and CACHE_DIR:
+                print(f"\n💾 Saving converted model to cache: {CACHE_DIR}")
+                print(
+                    "    This will take a few minutes but will save time on future runs..."
+                )
+                try:
+                    # Create cache directory if it doesn't exist
+                    os.makedirs(CACHE_DIR, exist_ok=True)
+
+                    # Save the model
+                    model.save_pretrained(
+                        CACHE_DIR,
+                        safe_serialization=True,  # Use safetensors format
+                        max_shard_size="5GB",  # Shard if model is too large
+                    )
+
+                    # Also save the tokenizer for convenience
+                    tokenizer.save_pretrained(CACHE_DIR)
+
+                    print(f"✅ Model cached successfully to: {CACHE_DIR}")
+                    print("   Next time, use --cache_dir to load instantly!")
+
+                    # If dump_only mode, exit after saving
+                    if DUMP_ONLY:
+                        print("\n" + "=" * 70)
+                        print(
+                            "🎉 Dump-only mode: Model conversion and caching completed!"
+                        )
+                        print("=" * 70)
+                        print(f"\n📁 Cached model location: {CACHE_DIR}")
+                        print("\n💡 To use the cached model in future runs:")
+                        print(f"   python test_minimax_m2.py --cache_dir {CACHE_DIR}")
+                        print("\n✅ Exiting (no generation performed)")
+                        return
+
+                except Exception as e:
+                    print(f"⚠️  Warning: Failed to save cache: {e}")
+                    print("   Continuing with analysis...")
 
         # 打印模型信息
         device = next(model.parameters()).device

@@ -109,6 +109,37 @@ python test_minimax_m2.py --output_format jsonl
 python test_minimax_m2.py --output_format pickle
 ```
 
+## 🚀 使用模型缓存（推荐！节省时间）
+
+**CPU模式下必读！** 缓存可以节省每次运行5-10分钟的转换时间。
+
+### 首次：创建缓存
+
+```bash
+# 方案1：只创建缓存（最快，推荐）
+python test_minimax_m2.py --cache_dir ./model_cache --dump_only
+
+# 方案2：运行分析并保存缓存
+python test_minimax_m2.py --cache_dir ./model_cache --dump_cache
+```
+
+### 后续：使用缓存
+
+```bash
+# 所有后续运行都使用缓存（快速加载）
+python test_minimax_m2.py \
+  --cache_dir ./model_cache \
+  --prompt "Your prompt" \
+  --max_tokens 1024
+```
+
+**时间对比：**
+- 不使用缓存：10-20分钟（加载+转换+生成）
+- 使用缓存：6-12分钟（加载+生成）
+- 节省：**4-8分钟**
+
+详见：[CACHING.md](CACHING.md)
+
 ## 完整示例
 
 ### 示例1：快速分析（最小配置）
@@ -118,9 +149,16 @@ python test_minimax_m2.py \
   --max_tokens 128
 ```
 
-### 示例2：标准分析
+### 示例2：标准分析（使用缓存）
 ```bash
+# 首次运行：创建缓存
 python test_minimax_m2.py \
+  --cache_dir ./cache \
+  --dump_only
+
+# 后续运行：使用缓存
+python test_minimax_m2.py \
+  --cache_dir ./cache \
   --prompt my_prompt.txt \
   --max_tokens 512 \
   --output_dir ./results/test1
@@ -129,6 +167,7 @@ python test_minimax_m2.py \
 ### 示例3：完整分析（包含专家权重）
 ```bash
 python test_minimax_m2.py \
+  --cache_dir ./cache \
   --prompt "Explain machine learning" \
   --max_tokens 1024 \
   --enable_expert_similarity \
@@ -138,14 +177,18 @@ python test_minimax_m2.py \
 
 ### 示例4：批量分析（使用不同prompt）
 ```bash
+# 一次性创建缓存
+python test_minimax_m2.py --cache_dir ./cache --dump_only
+
 # 准备多个prompt文件
 echo "Explain AI" > prompt1.txt
 echo "Explain ML" > prompt2.txt
 echo "Explain DL" > prompt3.txt
 
-# 逐个分析
+# 快速批量处理（都使用缓存）
 for i in {1..3}; do
     python test_minimax_m2.py \
+      --cache_dir ./cache \
       --prompt prompt${i}.txt \
       --output_dir ./results/batch_${i}
 done
@@ -213,6 +256,13 @@ python test_minimax_m2.py \
 | `--output_dir` | str | 自动生成 | 输出目录路径 |
 | `--disable_structured_output` | flag | False | 禁用JSON数据输出 |
 | `--output_format` | str | json | 结构化数据格式 |
+
+### 缓存相关（CPU模式）
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `--cache_dir` | str | None | 缓存目录路径 |
+| `--dump_cache` | flag | False | 运行后保存缓存 |
+| `--dump_only` | flag | False | 只转换和保存，不运行分析 |
 
 ## Prompt文件格式
 

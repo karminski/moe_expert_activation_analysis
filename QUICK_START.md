@@ -14,7 +14,23 @@ python test_minimax_m2.py
 - ✅ 生成512个tokens
 - ✅ 创建所有可视化报告
 - ✅ 生成JSON结构化数据
-- ⏱️ 约5-10分钟完成
+- ⏱️ 约5-10分钟完成（首次运行，包含FP8→float32转换）
+
+## ⚡ 加速技巧：使用缓存（推荐！）
+
+**如果你会多次运行，强烈推荐使用缓存！节省5-10分钟。**
+
+```bash
+# 第一次：创建缓存（只需做一次）
+python test_minimax_m2.py --cache_dir ./model_cache --dump_only
+# ⏱️ 约5-10分钟
+
+# 之后每次：使用缓存（超快！）
+python test_minimax_m2.py --cache_dir ./model_cache
+# ⏱️ 约1-2分钟加载 + 5-10分钟生成
+```
+
+**节省时间！** 第二次运行起就快很多。详见 [CACHING.md](CACHING.md)。
 
 ## 📝 自定义Prompt
 
