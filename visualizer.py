@@ -25,6 +25,126 @@ class MoEVisualizer:
         """Initialize the visualizer."""
         pass
 
+    def plot_expert_activation_3d(
+        self,
+        analyzer,
+        save_path: str = "expert_activation_3d.html",
+        max_tokens: int = 50,
+        max_layers: int = 10,
+        max_experts: int = 64,
+    ):
+        """
+        Create a 3D surface visualization of expert activation probabilities.
+        
+        Args:
+            analyzer: MoEAnalyzer instance with collected data
+            save_path: Path to save the HTML file
+            max_tokens: Maximum number of tokens to visualize (for performance)
+            max_layers: Maximum number of layers to visualize
+            max_experts: Maximum number of experts to visualize
+        """
+        print(f"\nGenerating 3D expert activation visualization...")
+        
+        if not hasattr(analyzer, 'activation_stats') or not analyzer.activation_stats:
+            print("⚠️  No activation data available for 3D visualization")
+            return
+        
+        # Select layers to visualize
+        all_layers = sorted(analyzer.activation_stats.keys())
+        layer_step = max(1, len(all_layers) // max_layers)
+        selected_layers = all_layers[::layer_step][:max_layers]
+        
+        # Create figure
+        fig = go.Figure()
+        
+        # Prepare data for each layer
+        for layer_idx, layer in enumerate(selected_layers):
+            stats = analyzer.activation_stats[layer]
+            routing_probs = stats['routing_probs'].numpy()  # [num_tokens, num_experts]
+            
+            # Limit tokens and experts for visualization
+            num_tokens = min(max_tokens, routing_probs.shape[0])
+            num_experts = min(max_experts, routing_probs.shape[1])
+            routing_probs = routing_probs[:num_tokens, :num_experts]
+            
+            # Transpose to have experts on X-axis and tokens on Y-axis
+            # This matches the typical layout where experts are columns
+            z_data = routing_probs.T  # [num_experts, num_tokens]
+            
+            # Create meshgrids
+            expert_indices = np.arange(num_experts)
+            token_indices = np.arange(num_tokens)
+            
+            # Add surface plot for this layer
+            # Offset layers in the Z direction to create stacked effect
+            z_offset = layer_idx * 0.3  # Stack layers
+            
+            # Create surface
+            fig.add_trace(
+                go.Surface(
+                    x=expert_indices,
+                    y=token_indices,
+                    z=z_data + z_offset,  # Add offset for each layer
+                    colorscale='Hot',
+                    opacity=0.85,
+                    name=f"Layer {layer}",
+                    hovertemplate="Expert: %{x}<br>Token: %{y}<br>Activation: %{z:.4f}<br>Layer: " + str(layer) + "<extra></extra>",
+                    showscale=(layer_idx == 0),  # Only show colorbar for first layer
+                    colorbar=dict(
+                        title="Activation<br>Probability",
+                        x=1.05,
+                        len=0.7,
+                    ) if layer_idx == 0 else None,
+                    cmin=0,
+                    cmax=1,
+                )
+            )
+        
+        # Update layout with better camera angle
+        fig.update_layout(
+            title=dict(
+                text="3D Expert Activation Visualization<br><sub>Surface height represents activation probability across layers</sub>",
+                x=0.5,
+                xanchor='center',
+            ),
+            scene=dict(
+                xaxis=dict(
+                    title="Expert Index",
+                    gridcolor="lightgray",
+                    backgroundcolor="rgba(230, 230, 250, 0.5)",
+                    showbackground=True,
+                ),
+                yaxis=dict(
+                    title="Token Position",
+                    gridcolor="lightgray",
+                    backgroundcolor="rgba(230, 250, 230, 0.5)",
+                    showbackground=True,
+                ),
+                zaxis=dict(
+                    title="Activation Probability (+ Layer Offset)",
+                    gridcolor="lightgray",
+                    backgroundcolor="rgba(250, 230, 230, 0.5)",
+                    showbackground=True,
+                ),
+                camera=dict(
+                    eye=dict(x=1.8, y=-1.8, z=1.5),  # Isometric-like view
+                    center=dict(x=0, y=0, z=0),
+                    up=dict(x=0, y=0, z=1),
+                ),
+                aspectmode='manual',
+                aspectratio=dict(x=1, y=1, z=0.8),
+            ),
+            width=1400,
+            height=1000,
+            hovermode='closest',
+            paper_bgcolor='rgba(240, 240, 250, 0.95)',
+            font=dict(size=12),
+        )
+        
+        fig.write_html(save_path)
+        print(f"✓ Saved 3D visualization to {save_path}")
+        print(f"   Visualized {len(selected_layers)} layers with {num_experts} experts and {num_tokens} tokens")
+
     def plot_expert_activation_heatmap(
         self,
         activation_matrix: np.ndarray,
@@ -429,7 +549,7 @@ class MoEVisualizer:
         print("=" * 60)
 
         # 1. Expert Activation Heatmap
-        print("\n[1/6] Generating expert activation heatmap...")
+        print("\n[1/7] Generating expert activation heatmap...")
         activation_matrix = analyzer.get_expert_activation_matrix()
         self.plot_expert_activation_heatmap(
             activation_matrix,
@@ -437,8 +557,21 @@ class MoEVisualizer:
             save_path=os.path.join(output_dir, "expert_activation_heatmap.html"),
         )
 
+        # 1.5. Expert Activation 3D Visualization
+        print("\n[2/7] Generating 3D expert activation visualization...")
+        try:
+            self.plot_expert_activation_3d(
+                analyzer,
+                save_path=os.path.join(output_dir, "expert_activation_3d.html"),
+                max_tokens=50,  # Limit for performance
+                max_layers=10,  # Limit for clarity
+                max_experts=64,  # Limit for performance
+            )
+        except Exception as e:
+            print(f"⚠️  Failed to generate 3D visualization: {e}")
+
         # 2. Layer Correlation Matrix
-        print("\n[2/6] Computing and plotting layer correlation matrix...")
+        print("\n[3/7] Computing and plotting layer correlation matrix...")
         correlation_data = analyzer.compute_layer_correlation_matrix(delta_max=30)
         self.plot_layer_correlation_matrix(
             correlation_data,
@@ -447,7 +580,7 @@ class MoEVisualizer:
 
         # 3. Periodic Patterns
         print(
-            f"\n[3/6] Analyzing periodic patterns (intervals: {periodic_intervals})..."
+            f"\n[4/7] Analyzing periodic patterns (intervals: {periodic_intervals})..."
         )
         periodic_data = analyzer.compute_periodic_patterns(intervals=periodic_intervals)
         self.plot_periodic_pattern(
@@ -456,7 +589,7 @@ class MoEVisualizer:
         )
 
         # 4. Router Weight Similarity
-        print("\n[4/6] Computing router weight similarity...")
+        print("\n[5/7] Computing router weight similarity...")
         router_sim_data = analyzer.compute_router_weight_similarity()
         self.plot_router_similarity_matrix(
             router_sim_data,
@@ -465,7 +598,7 @@ class MoEVisualizer:
 
         # 5. Expert Weight Similarity (可选，耗时较长)
         print(
-            f"\n[5/6] Computing expert weight similarity (delta={periodic_intervals[0]})..."
+            f"\n[6/7] Computing expert weight similarity (delta={periodic_intervals[0]})..."
         )
         print("    Using parallel processing to speed up computation...")
         print(
@@ -489,7 +622,7 @@ class MoEVisualizer:
             expert_sim_data = None
 
         # 6. Summary statistics
-        print("\n[6/6] Generating summary report...")
+        print("\n[7/7] Generating summary report...")
         summary = analyzer.get_summary_statistics()
         self._save_summary_report(summary, periodic_data, output_dir)
 

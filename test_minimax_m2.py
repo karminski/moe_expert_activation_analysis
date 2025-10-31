@@ -581,8 +581,8 @@ def main():
             print("Generating MoE Analysis Report (Fast Mode)")
             print("=" * 60)
 
-            # 1. Expert Activation Heatmap
-            print("\n[1/5] Generating expert activation heatmap...")
+            # 1. Expert Activation Heatmap (2D)
+            print("\n[1/6] Generating expert activation heatmap (2D)...")
             activation_matrix = analyzer.get_expert_activation_matrix()
             visualizer.plot_expert_activation_heatmap(
                 activation_matrix,
@@ -590,17 +590,28 @@ def main():
                 save_path=os.path.join(OUTPUT_DIR, "expert_activation_heatmap.html"),
             )
 
-            # 2. Layer Correlation Matrix
-            print("\n[2/5] Computing and plotting layer correlation matrix...")
+            # 2. Expert Activation 3D Visualization (NEW!)
+            print("\n[2/6] Generating expert activation 3D visualization...")
+            print("    This may take a moment for large models...")
+            visualizer.plot_expert_activation_3d(
+                analyzer,
+                save_path=os.path.join(OUTPUT_DIR, "expert_activation_3d.html"),
+                max_tokens=50,  # Limit for performance
+                max_layers=10,  # Show up to 10 layers
+                max_experts=64,  # Show up to 64 experts
+            )
+
+            # 3. Layer Correlation Matrix
+            print("\n[3/6] Computing and plotting layer correlation matrix...")
             correlation_data = analyzer.compute_layer_correlation_matrix(delta_max=30)
             visualizer.plot_layer_correlation_matrix(
                 correlation_data,
                 save_path=os.path.join(OUTPUT_DIR, "layer_correlation_matrix.html"),
             )
 
-            # 3. Periodic Patterns
+            # 4. Periodic Patterns
             print(
-                f"\n[3/5] Analyzing periodic patterns (intervals: {PERIODIC_INTERVALS})..."
+                f"\n[4/6] Analyzing periodic patterns (intervals: {PERIODIC_INTERVALS})..."
             )
             periodic_data = analyzer.compute_periodic_patterns(
                 intervals=PERIODIC_INTERVALS
@@ -610,18 +621,18 @@ def main():
                 save_path=os.path.join(OUTPUT_DIR, "periodic_pattern_analysis.html"),
             )
 
-            # 4. Router Weight Similarity
-            print("\n[4/5] Computing router weight similarity...")
+            # 5. Router Weight Similarity
+            print("\n[5/6] Computing router weight similarity...")
             router_sim_data = analyzer.compute_router_weight_similarity()
             visualizer.plot_router_similarity_matrix(
                 router_sim_data,
                 save_path=os.path.join(OUTPUT_DIR, "router_similarity_matrix.html"),
             )
 
-            # 5. Expert Weight Similarity (如果启用)
+            # 6. Expert Weight Similarity (如果启用)
             if ENABLE_EXPERT_WEIGHT_SIMILARITY:
                 print(
-                    f"\n[5/5] Computing expert weight similarity (delta={PERIODIC_INTERVALS[0]})..."
+                    f"\n[6/6] Computing expert weight similarity (delta={PERIODIC_INTERVALS[0]})..."
                 )
                 print(
                     f"    Using parallel mode with {EXPERT_SIMILARITY_N_JOBS or 'auto'} jobs"
@@ -645,7 +656,7 @@ def main():
                     print(f"\n    ⚠️  Error in expert weight similarity: {e}")
             else:
                 print(
-                    "\n[5/5] Skipping expert weight similarity (ENABLE_EXPERT_WEIGHT_SIMILARITY=False)"
+                    "\n[6/6] Skipping expert weight similarity (ENABLE_EXPERT_WEIGHT_SIMILARITY=False)"
                 )
 
             # Summary
@@ -680,7 +691,8 @@ def main():
         print("\n📊 Generated files:")
 
         files = [
-            ("expert_activation_heatmap.html", "专家激活热度图"),
+            ("expert_activation_heatmap.html", "专家激活热度图 (2D)"),
+            ("expert_activation_3d.html", "专家激活3D可视化 (交互式)"),
             ("layer_correlation_matrix.html", "层间相关性矩阵"),
             ("periodic_pattern_analysis.html", "周期性模式分析"),
             ("periodic_pattern_analysis_detailed.html", "周期性模式详细分析"),

@@ -243,39 +243,60 @@ For other MoE models or more control:
 The tool generates several HTML files with interactive Plotly visualizations:
 
 ### 1. `expert_activation_heatmap.html`
-A heatmap showing the average activation probability for each expert in each MoE layer.
+A 2D heatmap showing the average activation probability for each expert in each MoE layer.
 - **X-axis**: Expert index
 - **Y-axis**: Layer index
 - **Color**: Average activation probability
 
-### 2. `layer_correlation_matrix.html`
+### 2. `expert_activation_3d.html` ✨ NEW
+An interactive 3D surface visualization of expert activations across layers, tokens, and experts.
+- **X-axis**: Expert index
+- **Y-axis**: Token position
+- **Z-axis/Height**: Activation probability (with layer offsets for stacking)
+- **Features**: 
+  - Interactive rotation, zoom, and pan (drag to rotate, scroll to zoom)
+  - Multiple layers stacked vertically for easy comparison
+  - Hover to see detailed values (layer, expert, token, activation)
+  - Color gradient from cool (low activation) to hot (high activation)
+  - Isometric-style view similar to modern data visualizations
+  - Export capability (screenshot button in Plotly toolbar)
+- **Use case**: 
+  - Identify patterns across multiple dimensions simultaneously
+  - Compare activation patterns between different layers
+  - Spot anomalies or interesting token-expert interactions
+  - Create compelling visualizations for presentations
+
+### 3. `layer_correlation_matrix.html`
 A heatmap showing the correlation between expert activations at different layer distances (Δ).
 - **X-axis**: Layer distance (Δ)
 - **Y-axis**: Starting layer index
 - **Color**: Pearson correlation coefficient
 - **Bright bands at specific Δ values indicate periodic patterns**
 
-### 3. `periodic_pattern_analysis.html`
+### 4. `periodic_pattern_analysis.html`
 Bar charts showing the mean correlation at specific intervals (e.g., Δ=12, Δ=24).
 - Includes error bars showing standard deviation
 - A detailed view with box plots is also generated
 
-### 4. `router_similarity_matrix.html`
+### 5. `router_similarity_matrix.html`
 Heatmap of cosine similarity between router weights across layers.
 - Shows which layers have similar routing behavior
 - Includes column norm correlation analysis
 
-### 5. `expert_weight_similarity.html`
+### 6. `expert_weight_similarity.html`
 Histogram showing the distribution of cosine similarities between expert weights at the specified delta.
 - Shows mean and median similarity
 - Scatter plot by expert index also generated
 
-### 6. `summary_report.txt`
+### 7. `summary_report.txt`
 Text file containing summary statistics:
 - Number of MoE layers
 - Number of experts per layer
 - Total tokens analyzed
 - Periodic pattern statistics
+
+### 8. `analysis_data.json` & `analysis_summary.json` (if structured output enabled)
+Structured data in JSON format for programmatic processing and AI analysis.
 
 ## Programmatic Usage
 

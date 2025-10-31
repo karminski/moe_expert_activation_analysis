@@ -4,6 +4,24 @@ All notable changes to the MoE Expert Activation Analysis tool will be documente
 
 ## [Unreleased]
 
+### Added - 2025-10-31
+
+#### 3D Expert Activation Visualization
+- **Interactive 3D surface plots** of expert activations
+- Visualizes three dimensions simultaneously:
+  - Expert index (X-axis)
+  - Token position (Y-axis)
+  - Activation probability (Z-axis/height)
+- **Multiple layers stacked** with offsets for comparison
+- **Interactive features:**
+  - Rotate, zoom, and pan the 3D view
+  - Hover for detailed values
+  - Isometric-style camera angle
+  - Hot colorscale for activation intensity
+- **Performance optimized** with configurable sampling
+- Automatically generated as part of comprehensive report
+- Saved as `expert_activation_3d.html`
+
 ### Added - 2025-10-30
 
 #### Model Caching (CPU Mode)
