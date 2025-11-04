@@ -79,13 +79,22 @@ class MoEVisualizer:
             # Offset layers in the Z direction to create stacked effect
             z_offset = layer_idx * 0.3  # Stack layers
             
-            # Create surface
+            # Create surface with custom colorscale
+            # Custom gradient from deep blue (#19448e) to pink (#f4b3c2)
+            custom_colorscale = [
+                [0.0, '#19448e'],   # Deep blue (minimum)
+                [0.25, '#4a6fa5'],  # Medium blue
+                [0.5, '#7d8db8'],   # Light blue-purple
+                [0.75, '#c49fbb'],  # Light purple-pink
+                [1.0, '#f4b3c2']    # Pink (maximum)
+            ]
+            
             fig.add_trace(
                 go.Surface(
                     x=expert_indices,
                     y=token_indices,
                     z=z_data + z_offset,  # Add offset for each layer
-                    colorscale='Hot',
+                    colorscale=custom_colorscale,
                     opacity=0.85,
                     name=f"Layer {layer}",
                     hovertemplate="Expert: %{x}<br>Token: %{y}<br>Activation: %{z:.4f}<br>Layer: " + str(layer) + "<extra></extra>",

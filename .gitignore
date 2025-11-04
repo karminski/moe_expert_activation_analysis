@@ -1,0 +1,94 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Analysis Results
+results/
+*_results/
+*_analysis/
+output/
+*.html
+*.json
+*.jsonl
+*.pickle
+*.pkl
+summary_report.txt
+
+# Model Cache
+model_cache/
+*_cache/
+minimax_m2_cache/
+
+# Hugging Face
+.cache/
+hf_cache/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# System files (Windows)
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# System files (MacOS)
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# PyTorch
+*.pt
+*.pth
+*.ckpt
+
+# Weights
+*.bin
+*.safetensors
+

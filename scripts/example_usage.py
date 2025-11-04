@@ -9,11 +9,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import sys
 import os
 
-# Add current directory to path for imports
-sys.path.insert(0, os.path.dirname(__file__))
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from moe_analyzer import MoEAnalyzer
-from visualizer import MoEVisualizer
+from src.moe_analyzer import MoEAnalyzer
+from src.visualizer import MoEVisualizer
 
 
 def simple_example():

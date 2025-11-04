@@ -5,6 +5,7 @@ MiniMax-M2 备选测试脚本（简化版）
 """
 
 import os
+import sys
 
 # 强制使用CPU模式
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -14,9 +15,12 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from datetime import datetime
 
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 # Import analyzer modules
-from moe_analyzer import MoEAnalyzer
-from visualizer import MoEVisualizer
+from src.moe_analyzer import MoEAnalyzer
+from src.visualizer import MoEVisualizer
 
 
 def main():

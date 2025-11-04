@@ -15,13 +15,17 @@ if USE_CPU_MODE:
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
+import sys
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from datetime import datetime
 
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 # Import analyzer modules
-from moe_analyzer import MoEAnalyzer
-from visualizer import MoEVisualizer
+from src.moe_analyzer import MoEAnalyzer
+from src.visualizer import MoEVisualizer
 
 
 def parse_arguments():

@@ -17,10 +17,26 @@ All notable changes to the MoE Expert Activation Analysis tool will be documente
   - Rotate, zoom, and pan the 3D view
   - Hover for detailed values
   - Isometric-style camera angle
-  - Hot colorscale for activation intensity
+  - Custom blue-to-pink gradient (#19448e → #f4b3c2) optimized for clarity
 - **Performance optimized** with configurable sampling
 - Automatically generated as part of comprehensive report
 - Saved as `expert_activation_3d.html`
+- **Documentation:**
+  - `COLOR_SCHEME.md`: Detailed color scheme explanation and customization guide
+
+#### Color Scheme Improvements
+- **Custom gradient** replacing default "Hot" colorscale
+- **5-point gradient** for smooth color transitions:
+  - 0%: #19448e (deep blue) - low activation
+  - 25%: #4a6fa5 (medium blue)
+  - 50%: #7d8db8 (light blue-purple)
+  - 75%: #c49fbb (light purple-pink)
+  - 100%: #f4b3c2 (pink) - high activation
+- **Benefits:**
+  - Avoids white color that was hard to see on light backgrounds
+  - Better contrast and data differentiation
+  - Colorblind-friendly (excellent for red-green colorblindness)
+  - Smooth and natural color progression
 
 ### Added - 2025-10-30
 

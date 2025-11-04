@@ -2,6 +2,10 @@
 # MiniMax-M2 CPU运行脚本
 # 此脚本设置必要的环境变量以强制使用CPU
 
+# Get the directory of this script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+
 echo "======================================================================"
 echo "MiniMax-M2 CPU Analysis Runner"
 echo "======================================================================"

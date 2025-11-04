@@ -1,6 +1,10 @@
 #!/bin/bash
 # Example usage scripts for MiniMax-M2 MoE Expert Activation Analysis
 
+# Get the directory of this script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+
 echo "=========================================="
 echo "MiniMax-M2 Analysis Examples"
 echo "=========================================="
@@ -23,11 +27,11 @@ echo ""
 
 # Example 3: Load prompt from file
 echo -e "\n[Example 3] Load prompt from text file"
-echo "Command: python test_minimax_m2.py --prompt example_prompt.txt --max_tokens 1024"
+echo "Command: python test_minimax_m2.py --prompt ../examples/example_prompt.txt --max_tokens 1024"
 echo "Expected time: ~10-15 minutes (generates more tokens)"
 echo ""
 # Uncomment to run:
-# python test_minimax_m2.py --prompt example_prompt.txt --max_tokens 1024
+# python test_minimax_m2.py --prompt ../examples/example_prompt.txt --max_tokens 1024
 
 # Example 4: Enable expert similarity analysis with parallel processing
 echo -e "\n[Example 4] Full analysis with expert weight similarity (parallel)"
@@ -49,7 +53,7 @@ echo ""
 echo -e "\n[Example 6] Full customization"
 cat << 'EOF'
 Command: python test_minimax_m2.py \
-  --prompt example_prompt.txt \
+  --prompt ../examples/example_prompt.txt \
   --max_tokens 1024 \
   --enable_expert_similarity \
   --n_jobs 100 \
@@ -60,7 +64,7 @@ echo "Expected time: ~20-30 minutes (full analysis with high token count)"
 echo ""
 # Uncomment to run:
 # python test_minimax_m2.py \
-#   --prompt example_prompt.txt \
+#   --prompt ../examples/example_prompt.txt \
 #   --max_tokens 1024 \
 #   --enable_expert_similarity \
 #   --n_jobs 100 \

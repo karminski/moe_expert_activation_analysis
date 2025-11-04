@@ -1,6 +1,10 @@
 #!/bin/bash
 # Quick test script to verify the fix for early generation stopping
 
+# Get the directory of this script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+
 echo "=========================================="
 echo "Quick Generation Test"
 echo "=========================================="

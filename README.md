@@ -2,6 +2,8 @@
 
 A research tool for analyzing expert activation patterns in Mixture-of-Experts (MoE) transformer models. This tool helps researchers understand how different experts are activated across layers and whether there are periodic patterns in expert selection.
 
+> **📌 Note**: This project has been recently reorganized. If you're familiar with the old structure, see [MIGRATION.md](MIGRATION.md) for details on what changed.
+
 ## Motivation
 
 This tool was inspired by research findings about periodic activation patterns in MoE models, particularly the observation that expert activation probabilities can show strong correlations at specific layer distances (e.g., Δ=12). See [this Twitter thread](https://x.com/kilian_maciej/status/1982612297874026731) by @kilian_maciej for the original discussion about Qwen3 models.
@@ -20,19 +22,47 @@ Currently supports the following MoE architectures:
 - **DeepSeek-V3** (and DeepSeek-V3.2)
 - **Qwen3 MoE** variants (e.g., Qwen3-235B-A22B)
 
+## Project Structure
+
+```
+moe_expert_activation_analysis/
+├── src/                    # Core library modules
+│   ├── __init__.py        # Package initialization
+│   ├── moe_analyzer.py    # Main analyzer class
+│   ├── moe_hooks.py       # Hook management for capturing activations
+│   └── visualizer.py      # Visualization utilities
+├── scripts/               # Executable scripts
+│   ├── analyze_model.py   # Generic MoE model analyzer
+│   ├── test_minimax_m2.py # MiniMax-M2 specific test script
+│   ├── test_minimax_m2_alternative.py  # Simplified alternative
+│   ├── example_usage.py   # Example usage script
+│   ├── quick_test.sh      # Quick test shell script
+│   ├── run_examples.sh    # Example runner
+│   └── run_minimax_m2_cpu.sh  # CPU mode runner
+├── docs/                  # Documentation
+│   ├── USAGE.md          # Detailed usage guide
+│   ├── CACHING.md        # Model caching documentation
+│   ├── QUICK_START.md    # Quick start guide
+│   ├── TROUBLESHOOTING.md # Troubleshooting guide
+│   ├── 3D_VISUALIZATION.md # 3D visualization guide
+│   ├── STRUCTURED_DATA.md # Structured output format
+│   ├── COLOR_SCHEME.md   # Color scheme documentation
+│   ├── CPU_USAGE.md      # CPU usage guide
+│   └── CHANGELOG.md      # Version history
+├── examples/             # Example files
+│   └── example_prompt.txt # Sample prompt
+├── requirements.txt      # Python dependencies
+├── .gitignore           # Git ignore rules
+└── README.md            # This file
+```
+
 ## Installation
 
 ### Prerequisites
 
 ```bash
-# Navigate to the transformers repository root
-cd transformers
-
 # Install the tool's dependencies
-pip install -r examples/research_projects/moe_expert_activation_analysis/requirements.txt
-
-# Make sure you have transformers installed
-pip install -e .
+pip install -r requirements.txt
 ```
 
 ### Dependencies
@@ -45,23 +75,33 @@ pip install -e .
 
 ## Quick Start
 
+All scripts should be run from the project root directory or from the `scripts/` directory.
+
 ### Basic Usage
 
 ```bash
-cd examples/research_projects/moe_expert_activation_analysis
-
-python analyze_model.py \
+# From project root:
+python scripts/analyze_model.py \
   --model_path "Qwen/Qwen3-235B-A22B" \
   --model_type qwen3 \
   --prompt "Once upon a time, in a distant galaxy" \
   --max_length 200 \
   --output_dir ./results/qwen3_analysis
+
+# Or from scripts directory:
+cd scripts
+python analyze_model.py \
+  --model_path "Qwen/Qwen3-235B-A22B" \
+  --model_type qwen3 \
+  --prompt "Once upon a time, in a distant galaxy" \
+  --max_length 200 \
+  --output_dir ../results/qwen3_analysis
 ```
 
 ### With Periodic Pattern Analysis
 
 ```bash
-python analyze_model.py \
+python scripts/analyze_model.py \
   --model_path "deepseek-ai/DeepSeek-V3" \
   --model_type deepseek_v3 \
   --prompt "Explain the concept of quantum entanglement" \
@@ -78,19 +118,19 @@ python analyze_model.py \
 
 ```bash
 # Basic usage with default prompt
-python test_minimax_m2.py
+python scripts/test_minimax_m2.py
 
 # With custom prompt
-python test_minimax_m2.py --prompt "Write a Python script to visualize the Mandelbrot set"
+python scripts/test_minimax_m2.py --prompt "Write a Python script to visualize the Mandelbrot set"
 
 # Load prompt from file
-python test_minimax_m2.py --prompt my_prompt.txt --max_tokens 1024
+python scripts/test_minimax_m2.py --prompt my_prompt.txt --max_tokens 1024
 
 # Enable expert weight similarity analysis (time-consuming but comprehensive)
-python test_minimax_m2.py --enable_expert_similarity --n_jobs 64
+python scripts/test_minimax_m2.py --enable_expert_similarity --n_jobs 64
 
 # Full customization
-python test_minimax_m2.py \
+python scripts/test_minimax_m2.py \
   --prompt my_prompt.txt \
   --max_tokens 1024 \
   --enable_expert_similarity \
@@ -99,12 +139,12 @@ python test_minimax_m2.py \
   --output_dir ./my_results
 ```
 
-**Note:** See [USAGE.md](USAGE.md) for detailed documentation of all command-line options.
+**Note:** See [docs/USAGE.md](docs/USAGE.md) for detailed documentation of all command-line options.
 
 #### Using the generic analyzer
 
 ```bash
-python analyze_model.py \
+python scripts/analyze_model.py \
   --model_path "MiniMax/MiniMax-M2" \
   --model_type minimax \
   --prompt "Write a short story about artificial intelligence" \
@@ -167,19 +207,19 @@ This dedicated script provides a streamlined interface for MiniMax-M2 analysis:
 #### Examples
 ```bash
 # Quick test with default settings
-python test_minimax_m2.py
+python scripts/test_minimax_m2.py
 
 # Custom prompt with more tokens
-python test_minimax_m2.py --prompt "Explain quantum computing" --max_tokens 1024
+python scripts/test_minimax_m2.py --prompt "Explain quantum computing" --max_tokens 1024
 
 # Load prompt from file with greedy decoding (more stable on CPU)
-python test_minimax_m2.py --prompt my_research_question.txt --no_sample
+python scripts/test_minimax_m2.py --prompt my_research_question.txt --no_sample
 
 # Adjust temperature for more deterministic output
-python test_minimax_m2.py --temperature 0.3 --top_p 0.95
+python scripts/test_minimax_m2.py --temperature 0.3 --top_p 0.95
 
 # Full analysis with expert similarity
-python test_minimax_m2.py \
+python scripts/test_minimax_m2.py \
   --prompt "Write a Python sorting algorithm" \
   --max_tokens 1024 \
   --no_sample \
@@ -187,26 +227,26 @@ python test_minimax_m2.py \
   --n_jobs 64
 
 # If generation stops too early, try greedy decoding
-python test_minimax_m2.py \
+python scripts/test_minimax_m2.py \
   --prompt "Write a Python function" \
   --max_tokens 1024 \
   --no_sample
 
 # RECOMMENDED: Cache the float32 model for faster future runs (CPU mode)
 # Step 1: Create cache (one-time, takes 5-10 min)
-python test_minimax_m2.py --cache_dir ./model_cache --dump_only
+python scripts/test_minimax_m2.py --cache_dir ./model_cache --dump_only
 
 # Step 2: Use cache (loads in 1-2 min instead of 5-10 min)
-python test_minimax_m2.py --cache_dir ./model_cache --prompt "Your prompt"
+python scripts/test_minimax_m2.py --cache_dir ./model_cache --prompt "Your prompt"
 
 # Or: Create cache while running analysis
-python test_minimax_m2.py --cache_dir ./model_cache --dump_cache
+python scripts/test_minimax_m2.py --cache_dir ./model_cache --dump_cache
 
 # View all options
-python test_minimax_m2.py --help
+python scripts/test_minimax_m2.py --help
 ```
 
-**Note:** See [CACHING.md](CACHING.md) for detailed caching documentation.
+**Note:** See [docs/CACHING.md](docs/CACHING.md) for detailed caching documentation.
 
 ### Generic Analyzer (`analyze_model.py`)
 
@@ -257,7 +297,7 @@ An interactive 3D surface visualization of expert activations across layers, tok
   - Interactive rotation, zoom, and pan (drag to rotate, scroll to zoom)
   - Multiple layers stacked vertically for easy comparison
   - Hover to see detailed values (layer, expert, token, activation)
-  - Color gradient from cool (low activation) to hot (high activation)
+  - Custom blue-to-pink gradient (#19448e → #f4b3c2) optimized for clarity
   - Isometric-style view similar to modern data visualizations
   - Export capability (screenshot button in Plotly toolbar)
 - **Use case**: 
@@ -304,8 +344,8 @@ You can also use the tool as a Python library:
 
 ```python
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from moe_analyzer import MoEAnalyzer
-from visualizer import MoEVisualizer
+from src.moe_analyzer import MoEAnalyzer
+from src.visualizer import MoEVisualizer
 
 # Load model
 model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-235B-A22B")

@@ -163,10 +163,18 @@ z_data = activation_probs + z_offset
 这样不同层可以堆叠显示而不重叠。
 
 ### 颜色映射
-使用 `'Hot'` 颜色方案：
-- 0.0 (低激活): 深紫/黑色
-- 0.5 (中等激活): 红色/橙色
-- 1.0 (高激活): 黄色/白色
+使用自定义蓝-粉渐变方案（优化可读性）：
+- 0.0 (低激活): #19448e 深蓝色
+- 0.25: #4a6fa5 中蓝色
+- 0.5 (中等激活): #7d8db8 浅蓝紫色
+- 0.75: #c49fbb 浅紫粉色
+- 1.0 (高激活): #f4b3c2 粉红色
+
+这个配色方案相比默认的"Hot"颜色：
+- ✅ 避免了白色导致的视觉混淆
+- ✅ 提供清晰的低-高激活对比
+- ✅ 在深色和浅色背景下都易读
+- ✅ 色彩过渡平滑自然
 
 ### 视角设置
 默认使用等轴测视图：
@@ -199,9 +207,22 @@ camera = dict(
 3. 选择 "Download plot as png"
 
 ### Q4: 能否更改颜色方案？
-**A**: 可以！编辑 `visualizer.py` 中的 `plot_expert_activation_3d` 方法：
+**A**: 可以！编辑 `visualizer.py` 中的 `plot_expert_activation_3d` 方法。
+
+当前使用的是自定义蓝-粉渐变（优化可读性）：
 ```python
-colorscale='Hot'  # 改为 'Viridis', 'Plasma', 'Blues' 等
+custom_colorscale = [
+    [0.0, '#19448e'],   # 深蓝色
+    [0.25, '#4a6fa5'],  # 中蓝色
+    [0.5, '#7d8db8'],   # 浅蓝紫色
+    [0.75, '#c49fbb'],  # 浅紫粉色
+    [1.0, '#f4b3c2']    # 粉红色
+]
+```
+
+也可以改为Plotly内置方案：
+```python
+colorscale='Viridis'  # 或 'Plasma', 'Blues', 'Reds', 'Greens' 等
 ```
 
 ### Q5: 如何对比两次运行的结果？
