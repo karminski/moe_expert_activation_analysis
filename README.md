@@ -5,8 +5,6 @@
 
 A research tool for analyzing expert activation patterns in Mixture-of-Experts (MoE) transformer models. This tool helps researchers understand how different experts are activated across layers and whether there are periodic patterns in expert selection.
 
-> **📌 Note**: This project has been recently reorganized. If you're familiar with the old structure, see [MIGRATION.md](MIGRATION.md) for details on what changed.
-
 ## Motivation
 
 This tool was inspired by research findings about periodic activation patterns in MoE models, particularly the observation that expert activation probabilities can show strong correlations at specific layer distances (e.g., Δ=12). See [this Twitter thread](https://x.com/kilian_maciej/status/1982612297874026731) by @kilian_maciej for the original discussion about Qwen3 models.
