@@ -1,5 +1,7 @@
 # MoE Expert Activation Analysis Tool
 
+![](./assets/images/cover.png)
+
 A research tool for analyzing expert activation patterns in Mixture-of-Experts (MoE) transformer models. This tool helps researchers understand how different experts are activated across layers and whether there are periodic patterns in expert selection.
 
 > **📌 Note**: This project has been recently reorganized. If you're familiar with the old structure, see [MIGRATION.md](MIGRATION.md) for details on what changed.
